@@ -21,10 +21,15 @@ set base	[file dirname $here]
 tcl::tm::path add [file join $base tm tcl]
 
 package require evlog
+package require cflib
+
+cflib::config create cfg $argv {
+	variable evlog_uri	uds:///tmp/evlog.socket
+}
 
 evlog event foo		;# does nothing
 
-evlog connect [file tail [info script]]
+evlog connect [file tail [info script]] [cfg get evlog_uri]
 
 apply {
 	{} {

@@ -13,7 +13,10 @@ namespace eval evlog {
 		if {[info exists con]} {
 			$con destroy
 			unset con
+			proc event {args} {}
 		}
+
+		if {$uri eq ""} return
 
 		set con	[netdgram::connect_uri $uri]
 		$con send [encoding convertto utf-8 \

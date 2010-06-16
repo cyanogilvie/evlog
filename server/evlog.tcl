@@ -168,11 +168,19 @@ proc accept {con args} { #<<<
 		switch -- $op {
 			init {
 				lassign $data source source_time
-				set time_adjustment		[- [clock microseconds] $source_time]
+				if {[info object class [self]] eq "::netdgram::connection::uds"} {
+					# Don't adjust the times - they use the same reference
+					# clock as us
+					set time_adjustment	0
+				} else {
+					# The magic number 378 is a fudge factor based on tests on
+					# my notebook for the delay from localhost
+					set time_adjustment	[- [clock microseconds] $source_time 378]
+				}
 				newevent [clock microseconds] $source _connect ""
 				?? {
-					log trivia "Set source name for ($con) to \"$source\""
-					log trivia "Set time adjustment for ($con) to \"$time_adjustment\" usec"
+					log trivia "Set source name for ([self]) to \"$source\""
+					log trivia "Set time adjustment for ([self]) to \"$time_adjustment\" usec"
 				}
 			}
 
