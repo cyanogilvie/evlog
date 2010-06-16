@@ -67,7 +67,9 @@ set dbthread	[thread::create -preserved [format {
 				source		text not null,
 				evtype		text not null,
 				details		text
-			)
+			);
+
+			create index events_evtime_idx on events(evtime);
 		}
 	}
 

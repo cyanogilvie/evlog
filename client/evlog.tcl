@@ -1,6 +1,6 @@
 # vim: ft=tcl foldmethod=marker foldmarker=<<<,>>> ts=4 shiftwidth=4
 
-namespace eval evlog {
+namespace eval ::evlog {
 	namespace export *
 	namespace ensemble create
 
