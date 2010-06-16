@@ -1,0 +1,42 @@
+set version	0.1
+
+application evlog { #<<<
+	version $::version
+
+	requires {
+		cflib
+		dsl
+		sop
+		netdgram
+		netdgram::tcp
+		netdgram::uds
+		sqlite3
+		Thread
+		logging
+	}
+
+	files {
+		server/evlog.tcl
+	}
+
+	platform [this_platform]
+}
+
+#>>>
+tm evlog { #<<<
+	version $::version
+
+	requires {
+		netdgram
+	}
+
+	files {
+		client/evlog.tcl
+	}
+
+	platform tcl
+}
+
+#>>>
+
+# vim: ft=tcl foldmethod=marker foldmarker=<<<,>>> ts=4 shiftwidth=4
