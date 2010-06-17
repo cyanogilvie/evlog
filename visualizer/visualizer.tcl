@@ -28,9 +28,10 @@ ttk::style theme use clam
 
 set here	[file dirname [file normalize [info script]]]
 cflib::config create cfg $argv {
-	variable debug		0
-	variable evdb		/tmp/evdb.sqlite3
-	variable loglevel	notice
+	variable debug				0
+	variable evdb				/tmp/evdb.sqlite3
+	variable loglevel			notice
+	variable min_usec_per_pixel	7
 }
 
 if {[cfg get debug]} {
