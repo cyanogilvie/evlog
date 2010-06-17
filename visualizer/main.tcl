@@ -302,12 +302,14 @@ cftklib::Application subclass Main {
 				order by
 					evtime asc
 			} {
+				lassign [my fqname_split $evtype] t1 t2
 				set x	[my _usec2x $evtime]
 				lassign [dict get $strips $source ys] y1 y2
-				lassign [my _evtype_colours $evtype] fill outline
-				set id	[$w.c create rectangle $x [+ $y1 4] [+ $x 6] [- $y2 4] \
+				lassign [plugin $t1 evtype_colours $t2] fill outline
+				dict set ids [plugin $t1 draw_marker $source $evtime $t2 $w.c \
+						$x [+ $y1 4] [- $y2 4] \
 						-fill $fill -width 1 -outline $outline \
-						-tags [list $source]]
+						-tags [list $source]] $evtime
 				dict set ids $id $evtime
 			}
 			set repaint	0
@@ -340,16 +342,16 @@ cftklib::Application subclass Main {
 	}
 
 	#>>>
-	method _evtype_colours {evtype} { #<<<
-		switch -glob -- $evtype {
-			m2.queue_msg	{list #70ff70 #00ff00}
-			m2.receive_msg	{list #7070ff #0000ff}
-			_connect		{list #707070 #202020}
-			_disconnect		{list #707070 #202020}
-			log.error		{list #fd1e00 #d22d17}
-			log.warn*		{list #f929d9 #ae1196}
-			log.*			{list #fbf795 #e1c75e}
-			default			{list #707070 #202020}
+	method fqname_split {name} { #<<<
+		set idx	[string first . $name]
+		if {$idx == -1} {
+			if {[string index $name 0] eq "_"} {
+				list _system $name
+			} else {
+				list $name $name
+			}
+		} else {
+			list [string range $name 0 [- $idx 1]] [string range $name [+ $idx 1] end]
 		}
 	}
 

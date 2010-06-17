@@ -32,6 +32,7 @@ cflib::config create cfg $argv {
 	variable evdb				/tmp/evdb.sqlite3
 	variable loglevel			notice
 	variable min_usec_per_pixel	7
+	variable plugins			plugins
 }
 
 if {[cfg get debug]} {
@@ -61,11 +62,41 @@ if {[db onecolumn {
 }
 
 source [file join $here main.tcl]
+source [file join $here plugin.tcl]
+
+# Load plugins <<<
+namespace eval plugin {
+	namespace export *
+	namespace ensemble create -prefixes no -unknown [list apply {
+		{argv0 name method args} {
+			log warning "No plugin for \"$name\", using _default plugin"
+			interp alias {} ::plugin::$name {} ::plugin::_default
+			return {}
+		}
+	}]
+}
+proc Plugin {name def} { #<<<
+	[oo::class new "superclass ::PluginBase\n$def"] create ::plugin::$name
+}
+
+#>>>
+
+::oo::objdefine ::oo::class export new
+foreach fn [glob -type f -nocomplain [file join $here [cfg get plugins] *.tcl]] {
+	try {
+		source $fn
+	} on error {errmsg options} {
+		log error "Error loading plugin \"$fn\": [dict get $options -errorinfo]"
+	}
+}
+::oo::objdefine ::oo::class unexport new
+# Load plugins >>>
 
 try {
 	Main .main -title "Evlog Visualizer"
 } on error {errmsg options} {
 	puts stderr [dict get $options -errorinfo]
 }
+
 
 .main show
