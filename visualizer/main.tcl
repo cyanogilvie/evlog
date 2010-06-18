@@ -312,6 +312,9 @@ cftklib::Application subclass Main {
 						-tags [list $source]] $evtime
 				dict set ids $id $evtime
 			}
+			foreach plugin $::plugins {
+				plugin $plugin draw_overlay $w.c $start_usec $usec_per_pixel
+			}
 			set repaint	0
 		} else {
 			dict for {id evtime} $ids {
@@ -327,6 +330,9 @@ cftklib::Application subclass Main {
 				$w.c coords [dict get $info strip_track] \
 						[- $min_x 1] $y1 [+ $max_x 1] $y2
 				$w.c coords [dict get $info strip_bg] $x1 $y1 $x2 $y2
+			}
+			foreach plugin $::plugins {
+				plugin $plugin adjust_overlay $w.c $start_usec $usec_per_pixel
 			}
 			$w.c configure -scrollregion [list $min_x 0 $max_x $canv_height]
 			set range	[- $latest_usec $earliest_usec]
@@ -353,6 +359,11 @@ cftklib::Application subclass Main {
 		} else {
 			list [string range $name 0 [- $idx 1]] [string range $name [+ $idx 1] end]
 		}
+	}
+
+	#>>>
+	method source_ys {source} { #<<<
+		dict get $strips $source ys
 	}
 
 	#>>>

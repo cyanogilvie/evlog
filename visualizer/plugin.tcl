@@ -7,10 +7,20 @@ oo::class create PluginBase {
 		my variable name
 		set name	[namespace tail [self]]
 
+		lappend ::plugins $name
+
 		namespace path [concat [namespace path] {
 			::oo::Helpers::cflib
 			::tcl::mathop
 		}]
+	}
+
+	#>>>
+	destructor { #<<<
+		if {[info exists name]} {
+			set ::plugins	[lsearch -inline -all -not $::plugins $name]
+		}
+		if {[self next] ne ""} next
 	}
 
 	#>>>
@@ -129,6 +139,14 @@ oo::class create PluginBase {
 				evtype = $fqevtype and
 				evtime = $evtime
 		}
+	}
+
+	#>>>
+	method draw_overlay {c start_usec usec_per_pixel} { #<<<
+	}
+
+	#>>>
+	method adjust_overlay {c start_usec usec_per_pixel} { #<<<
 	}
 
 	#>>>
