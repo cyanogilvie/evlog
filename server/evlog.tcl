@@ -26,7 +26,7 @@ namespace path [concat [namespace path] {
 }]
 
 cflib::config create cfg $argv {
-	variable listen_uris	{tcp://:7200 uds:///tmp/evlog.socket}
+	variable listen_uris	{tcp://:7200 uds:///tmp/evlog.socket jssocket://:7201}
 	variable debug			0
 	variable evdb			/tmp/evdb.sqlite3
 	variable loglevel		notice
@@ -170,14 +170,33 @@ proc accept {con args} { #<<<
 		switch -- $op {
 			init {
 				lassign $data source source_time
-				if {[info object class [self]] eq "::netdgram::connection::uds"} {
-					# Don't adjust the times - they use the same reference
-					# clock as us
-					set time_adjustment	0
-				} else {
-					# The magic number 378 is a fudge factor based on tests on
-					# my notebook for the delay from localhost
-					set time_adjustment	[- [clock microseconds] $source_time 378]
+				switch -- [info object class [self]] {
+					::netdgram::connection::uds {
+						# Don't adjust the times - they use the same reference
+						# clock as us
+						set time_adjustment	0
+					}
+
+					::netdgram::connection::tcp {
+						my variable cl_ip
+						if {$cl_ip eq "127.0.0.1"} {
+							set time_adjustment	0
+						} else {
+							# The magic number 378 is a fudge factor based on
+							# tests on my notebook for the delay from localhost
+							set time_adjustment	[- [clock microseconds] $source_time 378]
+						}
+					}
+
+					default {
+						if {$source_time eq "servertime"} {
+							# The source opts to use the server's time reference
+							# This can be because it has no access to reliable
+							# high resolution time stamps (like javascript)
+							# We add a fudge to adjust for message delay
+							set time_adjustment	-378
+						}
+					}
 				}
 				newevent [clock microseconds] $source _connect ""
 				?? {
@@ -188,6 +207,9 @@ proc accept {con args} { #<<<
 
 			ev {
 				lassign $data source_time evtype details
+				if {$source_time == -1} {
+					set source_time	[clock microseconds]
+				}
 				newevent [+ $source_time $time_adjustment] $source $evtype $details
 			}
 
