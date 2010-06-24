@@ -5,6 +5,14 @@ evlog = {
 	host: null,
 	port: null,
 
+	connected: function() {
+		return this._socket !== null;
+	},
+
+	on_connect: function(cb) {
+		this._connect_cb = cb;
+	},
+
 	connect: function(sourcename, host, port) {
 		var self;
 		self = this;
@@ -21,23 +29,17 @@ evlog = {
 		this.port = port;
 
 		this._socket = new jsSocket({
-			keepalive: null,
-			logger:	this.log,
-			debug: false
+			host: this.host,
+			port: this.port
 		});
 
-		this._socket.onData = function(data) {
+		this._socket.received = function(data) {
 			self._receive_raw(data);
 		};
 
-		this._socket.onStatus = function(type, val) {
-			self._socket_onStatus(type, val);
-		};
-
-		this._socket.onLoaded = function(data) {
-			console.log('Attempting to connect to '+self.host+':'+self.port);
-			self._socket.open(self.host, self.port);
-		};
+		this._socket.signals.connected.attach_output(function(newstate) {
+			self._connected_changed(newstate);
+		});
 	},
 
 	log: console.log,
@@ -46,34 +48,24 @@ evlog = {
 
 	send: function() {
 		this._socket.send(
-			Base64.encode(
-				Utf8.encode(
-					serialize_tcl_list(arguments)
-				)
+			Utf8.encode(
+				serialize_tcl_list(arguments)
 			)
 		);
 	},
 
-	_socket_onStatus: function(type, val){
-		console.log('evlog socket onStatus type: ', type, ', val: ', val);
-		switch (type) {
-			case 'connecting': break;
-			case 'connected':
-				this.send('init', this._sourcename, 'servertime');
-				this.event = function(type, details) {
-					if (typeof details == 'undefined') {
-						details = '';
-					}
-					this.send('ev', '-1', type, details);
-				};
-				break;
-			case 'disconnected':
-				break;
-			case 'waiting': break;
-			case 'failed': break;
-			default:
-				this.log('Unhandled socket status: "'+type+'"');
-				break;
+	_connected_changed: function(newstate){
+		if (newstate) {
+			this.send('init', this._sourcename, 'servertime');
+			this.event = function(type, details) {
+				if (typeof details == 'undefined') {
+					details = '';
+				}
+				this.send('ev', '-1', type, details);
+			};
+			if (this.on_connect !== null) {
+				this.on_connect();
+			}
 		}
 	}
 };
