@@ -43,14 +43,17 @@ cftklib::Application subclass Main {
 		ttk::scale $w.zoom -orient horizontal -variable [scope usec_per_pixel] \
 				-command [list $dominos(redraw) tip]
 
+		ttk::label $w.status
+
 		my refresh
 
 		table $w -padx 0 -pady 0 \
 				$w.l		1,1 -fill both \
 				$w.c		1,2 -fill both \
 				$w.hsb		2,2 -fill x \
-				$w.zoom		3,2 -fill x
-		table configure $w c1 r2 r3 -resize none
+				$w.zoom		3,2 -fill x \
+				$w.status	4,1 -cspan 2 -fill x
+		table configure $w c1 r2 r3 r4 -resize none
 
 		$dominos(redraw) attach_output [code _redraw]
 
@@ -58,6 +61,7 @@ cftklib::Application subclass Main {
 		bind $w.c <ButtonPress-4>	[code _zoom_in %x]
 		bind $w.c <ButtonPress-5>	[code _zoom_out %x]
 		bind $w.c <ButtonPress-3>	[list coroutine ::coro_drag {*}[code _start_drag] %x]
+		bind $w.c <ButtonPress-1>	[list coroutine ::coro_drag {*}[code _start_left_drag] %x %y]
 
 		set screenwidth	[winfo screenwidth $w]
 		my configure \
@@ -150,6 +154,94 @@ cftklib::Application subclass Main {
 
 		bind $w.c <Motion> {}
 		bind $w.c <ButtonRelease-3> {}
+	}
+
+	#>>>
+	method _start_left_drag {x y} { #<<<
+		set last_x	$x
+		bind $w.c <Motion> [list apply {
+			{coro x y} {
+				$coro [list motion $x $y]
+			}
+		} [info coroutine] %x %y]
+		bind $w.c <ButtonRelease-1> [list [info coroutine] dragstop]
+
+		set draghandler	[my _get_draghandler]
+		{*}$draghandler start_drag $x $y
+
+		while {1} {
+			set rest	[lassign [yield] wakeup_reason]
+			switch -- $wakeup_reason {
+				motion {
+					lassign $rest new_x new_y
+					#set delta	[- $last_x $new_x]
+					#set last_x	$new_x
+					#set delta_usec	[* $delta $usec_per_pixel]
+					#lassign [$w.c xview] a b
+					#set range			[- $latest_usec $earliest_usec]
+					#set left_usec		[expr {$earliest_usec + $range * $a}]
+					#set new_left_usec	[+ $left_usec $delta_usec]
+					#$w.c xview moveto	[/ [- $new_left_usec $earliest_usec] $range]
+					set x	$new_x
+					set y	$new_y
+					{*}$draghandler update_drag $x $y
+				}
+
+				dragstop {
+					{*}$draghandler stop_drag $x $y
+					break
+				}
+
+				default {
+					log error "Unexpected wakeup reason: \"$wakeup_reason\""
+				}
+			}
+		}
+
+		bind $w.c <Motion> {}
+		bind $w.c <ButtonRelease-1> {}
+	}
+
+	#>>>
+	method _get_draghandler {} { #<<<
+		# Debug
+		list apply {
+			{coro op x y} {$coro [list $op $x $y]}
+		} [coroutine coro_drag_[incr ::coro_seq] apply {
+			{w height} {
+				while {1} {
+					lassign [yield [info coroutine]] op x y
+					switch -- $op {
+						start_drag {
+							set x1 $x
+							set id	[$w.c create rectangle $x1 0 $x1 $height \
+									-fill #ffecec -width 1 -outline #f9b1b1]
+							$w.c raise $id strip_bg
+						}
+
+						update_drag {
+							set x2 $x
+							$w.c coords $id $x1 0 $x2 $height
+							lassign [lsort -integer [list $x1 $x2]] from_x to_x
+							set from_usec	[.main x2usec $from_x]
+							set to_usec		[.main x2usec $to_x]
+							$w.status configure -text [format "Range: %.2f usec: %.5f ms - %.5f ms" [expr {$to_usec - $from_usec}] [expr {$from_usec/1000.0}] [expr {$to_usec/1000.0}]]
+						}
+
+						stop_drag {
+							set x2 $x
+							$w.c delete $id
+							$w.status configure -text ""
+							break
+						}
+
+						default {
+							log error "Unexpected drag update: \"$op\""
+						}
+					}
+				}
+			}
+		} $w [my canvas_height]]
 	}
 
 	#>>>
@@ -272,7 +364,7 @@ cftklib::Application subclass Main {
 
 				set id	[$w.c create rectangle $x1 $y1 $x2 $y2 \
 						-fill white -outline black -width 1 \
-						-tags [list source_$source]]
+						-tags [list source_$source strip_bg]]
 				dict set strips $source strip_bg $id
 
 				set id	[$w.l create rectangle 4 $y1 [- $legend_width 4] $y2 \
@@ -348,6 +440,11 @@ cftklib::Application subclass Main {
 	}
 
 	#>>>
+	method x2usec {x} { #<<<
+		- [+ $start_usec [* $x $usec_per_pixel]] $earliest_usec
+	}
+
+	#>>>
 	method fqname_split {name} { #<<<
 		set idx	[string first . $name]
 		if {$idx == -1} {
@@ -364,6 +461,12 @@ cftklib::Application subclass Main {
 	#>>>
 	method source_ys {source} { #<<<
 		dict get $strips $source ys
+	}
+
+	#>>>
+	method canvas_height {} { #<<<
+		#winfo reqheight $w.c
+		set canv_height
 	}
 
 	#>>>

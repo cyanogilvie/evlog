@@ -3,6 +3,8 @@
 Plugin log {
 	method evtype_colours {evtype} { #<<<
 		switch -- $evtype {
+			trivia -
+			debug	{list #fffdd0 #ecd98f}
 			error	{list #fd1e00 #d22d17}
 			warn*	{list #f929d9 #ae1196}
 			default	{list #fbf795 #e1c75e}
