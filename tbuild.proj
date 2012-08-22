@@ -1,4 +1,4 @@
-set version	0.3
+set version	0.3.1
 
 tm evlog { #<<<
 	version $::version
@@ -25,15 +25,18 @@ application evlog { #<<<
 		netdgram
 		netdgram::tcp
 		netdgram::uds
+		netdgram::jssocket
 		sqlite3
 		Thread
 		logging
+		unix_sockets
 	}
 
 	files {
 		server/evlog.tcl
 	}
 
+	platform linux-glibc2.11-x86_64
 	platform [this_platform]
 }
 

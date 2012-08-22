@@ -52,6 +52,9 @@ namespace eval ::evlog {
 
 			package require netdgram
 
+			proc ?? args {}
+			proc log {lvl msg args} {puts $msg}
+
 			set con	[netdgram::connect_uri %uri%]
 			proc [info object namespace $con]::log args {}
 			proc send packet [format {

@@ -1,12 +1,10 @@
-/*global define */
+/*global define, io */
 /*jslint nomen: true, plusplus: true, white: true, browser: true, node: true, newcap: true, continue: true */
 
 define([
-	'cf/jsSocket',
-	'cf/tcllist/tcllist',
-	'cf/webtoolkit/utf8'
+	'tcl/list',
+	'webtoolkit/utf8'
 ], function(
-	jsSocket,
 	tcllist,
 	Utf8
 ) {
@@ -49,25 +47,27 @@ define([
 		},
 
 		connect: function(sourcename, host, port) {
+			var self;
+
 			_sourcename = sourcename;
 
 			if (host === undefined) {
 				host = '127.0.0.1';
 			}
 			if (port === undefined) {
-				port = 7201;
+				port = 7200;
 			}
 			this.host = host;
 			this.port = port;
 
-			_socket = new jsSocket({
-				host: this.host,
-				port: this.port
+			_socket = io.connect('http://'+this.host+':'+this.port);
+
+			_socket.on('connect', function(){
+				self.connected_changed(true);
 			});
-
-			_socket.received = function(){};
-
-			_socket.signals.connected.attach_output(connected_changed);
+			_socket.on('disconnect', function(){
+				self.connected_changed(false);
+			});
 		}
 	};
 
